@@ -96,49 +96,4 @@ export const cloudinaryService = {
       throw error;
     }
   },
-  async uploadPDF(base64Data, filename) {
-    try {
-      const { config } = await import("../config/environment.js");
-
-      // Preparar el body de la petición
-      const formData = new URLSearchParams();
-      formData.append("file", `data:application/pdf;base64,${base64Data}`);
-      formData.append("upload_preset", "cedulas");
-      formData.append("resource_type", "raw");
-      formData.append("folder", "cedulas"); // Organizar en carpeta
-
-      if (filename) {
-        formData.append("public_id", `cedulas/${filename}`);
-      }
-
-      // Hacer la petición a Cloudinary
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${config.cloudinary.cloudName}/raw/upload`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Cloudinary error ${response.status}: ${errorText}`);
-      }
-
-      const data = await response.json();
-
-      if (!data.secure_url) {
-        throw new Error("Cloudinary no devolvió una URL segura");
-      }
-
-      return {
-        success: true,
-        url: data.secure_url,
-        publicId: data.public_id,
-      };
-    } catch (error) {
-      console.error("Error subiendo PDF a Cloudinary:", error);
-      throw error;
-    }
-  },
 };

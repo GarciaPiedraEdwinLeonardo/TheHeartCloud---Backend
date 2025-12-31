@@ -62,7 +62,6 @@ export const verificationService = {
         universidad,
         anioTitulacion,
         documentoCedula,
-        filename,
       } = verificationData;
 
       // Validaciones
@@ -92,22 +91,7 @@ export const verificationService = {
         );
       }
 
-      // 4. Subir PDF a Cloudinary desde el backend
-      const { cloudinaryService } = await import("./cloudinary.service.js");
-
-      // Generar nombre único para el archivo
-      const uniqueFilename = `${cedula}_${Date.now()}`;
-
-      const uploadResult = await cloudinaryService.uploadPDF(
-        documentoCedula,
-        uniqueFilename
-      );
-
-      if (!uploadResult.success) {
-        throw new Error("Error al subir el documento a Cloudinary");
-      }
-
-      // 5. Actualizar documento del usuario
+      // 4. Actualizar documento del usuario
       const userUpdate = {
         name: {
           apellidopat: apellidoPaterno,
@@ -120,8 +104,7 @@ export const verificationService = {
           licenseCountry: paisCedula || "México",
           university: universidad,
           titulationYear: year,
-          licenseDocument: uploadResult.url,
-          licenseDocumentPublicId: uploadResult.publicId, //Para eliminar despues si es necesario
+          licenseDocument: documentoCedula,
           verificationStatus: "pending",
           submittedAt: admin.firestore.FieldValue.serverTimestamp(),
           verifiedAt: null,
@@ -135,7 +118,6 @@ export const verificationService = {
         success: true,
         message: "Solicitud de verificación enviada exitosamente",
         status: "pending",
-        documentUrl: uploadResult.url,
       };
     } catch (error) {
       console.error("Error enviando verificación:", error);
