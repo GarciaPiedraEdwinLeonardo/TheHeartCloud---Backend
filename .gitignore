@@ -1,0 +1,53 @@
+# =========================
+# Node.js
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.local
+.env.*.local
+
+# Ejemplo de env (sí se puede subir)
+!.env.example
+
+# =========================
+# Firebase credentials
+# =========================
+# Nunca subas llaves privadas
+*.json
+!package.json
+!vercel.json
+
+# (Si algún día necesitas subir otros JSON explícitos,
+# se pueden whitelistear aquí)
+
+# =========================
+# Vercel
+# =========================
+.vercel
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Build / cache
+# =========================
+dist/
+build/
+.cache/
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
