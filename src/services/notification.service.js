@@ -257,4 +257,52 @@ export const notificationService = {
       throw error;
     }
   },
+  async sendVerificationApproved(userId, userName, adminEmail) {
+    try {
+      await this.smartCleanup(userId);
+
+      await db.collection("notifications").add({
+        userId,
+        type: "verification_approved",
+        title: "¡Verificación Aprobada! 🎉",
+        message: `Felicidades ${userName}, tu cuenta médica ha sido verificada y ahora puedes publicar y comentar.`,
+        isRead: false,
+        isActionable: false,
+        actionData: {
+          triggeredByUsername: adminEmail,
+        },
+        createdAt: new Date(),
+        expiresAt: getExpirationDate(),
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error enviando notificación:", error);
+      throw error;
+    }
+  },
+  async sendVerificationRejected(userId, reason, adminEmail) {
+    try {
+      await this.smartCleanup(userId);
+
+      await db.collection("notifications").add({
+        userId,
+        type: "verification_rejected",
+        title: "Solicitud Rechazada ❌",
+        message: `Tu solicitud de verificación fue rechazada. Razón: ${reason}`,
+        isRead: false,
+        isActionable: true,
+        actionData: {
+          triggeredByUsername: adminEmail,
+          actionRequired: "resubmit_verification",
+        },
+        createdAt: new Date(),
+        expiresAt: getExpirationDate(),
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error en notificación de rechazo:", error);
+    }
+  },
 };
