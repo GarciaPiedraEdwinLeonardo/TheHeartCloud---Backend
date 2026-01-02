@@ -11,6 +11,9 @@ export const verificationService = {
       const userDoc = await db.collection("users").doc(userId).get();
 
       if (!userDoc.exists) {
+        console.warn(
+          `⚠️ Usuario ${userId} no encontrado para obtener estado de verificación`
+        );
         throw new Error("Usuario no encontrado");
       }
 

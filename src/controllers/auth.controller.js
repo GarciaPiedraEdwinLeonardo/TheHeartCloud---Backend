@@ -189,13 +189,66 @@ export const authController = {
         });
       }
 
-      await authService.updateLastLogin(userId);
+      const result = await authService.updateLastLogin(userId);
+
+      if (!result.success) {
+        // Si el usuario no existe, retornar 404 pero sin hacer crash
+        if (result.error === "Usuario no encontrado") {
+          return res.status(404).json({
+            success: false,
+            error: result.error,
+          });
+        }
+
+        return res.status(500).json({
+          success: false,
+          error: result.error,
+        });
+      }
 
       return res.status(200).json({
         success: true,
         message: "LastLogin actualizado",
       });
     } catch (error) {
+      next(error);
+    }
+  },
+  async deleteAccount(req, res, next) {
+    try {
+      const userId = req.user.uid;
+
+      const result = await authService.deleteAccount(userId);
+
+      if (result.success) {
+        return res.status(200).json({
+          success: true,
+          message: "Cuenta eliminada exitosamente",
+          ...result,
+        });
+      } else {
+        return res.status(207).json({
+          success: false,
+          message: "Eliminación parcial",
+          ...result,
+        });
+      }
+    } catch (error) {
+      if (error.message === "Usuario no encontrado") {
+        return res.status(404).json({
+          success: false,
+          error: error.message,
+        });
+      }
+
+      if (error.code === "auth/requires-recent-login") {
+        return res.status(401).json({
+          success: false,
+          error: "Requiere inicio de sesión reciente",
+          code: "auth/requires-recent-login",
+        });
+      }
+
       next(error);
     }
   },

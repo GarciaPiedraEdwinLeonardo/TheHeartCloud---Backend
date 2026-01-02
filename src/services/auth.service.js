@@ -366,12 +366,115 @@ export const authService = {
   },
   async updateLastLogin(userId) {
     try {
+      // Verificar que el usuario existe antes de actualizar
+      const userDoc = await db.collection("users").doc(userId).get();
+
+      if (!userDoc.exists) {
+        console.warn(
+          `⚠️ Usuario ${userId} no encontrado para actualizar lastLogin`
+        );
+        return { success: false, error: "Usuario no encontrado" };
+      }
+
       await db.collection("users").doc(userId).update({
         lastLogin: admin.firestore.FieldValue.serverTimestamp(),
       });
       return { success: true };
     } catch (error) {
       console.error("Error actualizando lastLogin:", error);
+      // No lanzar error, solo registrarlo
+      return { success: false, error: error.message };
+    }
+  },
+  /**
+   * Eliminar cuenta de usuario
+   */
+  async deleteAccount(userId) {
+    try {
+      const result = {
+        userId: userId,
+        deletedFromAuth: false,
+        deletedFromFirestore: false,
+        errors: [],
+      };
+
+      // 1. Obtener datos del usuario antes de eliminar
+      const userDoc = await db.collection("users").doc(userId).get();
+      if (!userDoc.exists) {
+        throw new Error("Usuario no encontrado");
+      }
+
+      const userData = userDoc.data();
+
+      // 2. Eliminar foto de perfil de Cloudinary si existe
+      if (userData.photoURL && userData.photoURL.includes("cloudinary.com")) {
+        try {
+          const { cloudinaryService } = await import("./cloudinary.service.js");
+          await cloudinaryService.deleteImage(userData.photoURL);
+          console.log("✅ Foto de perfil eliminada de Cloudinary");
+        } catch (error) {
+          console.warn("⚠️ Error eliminando foto de perfil:", error);
+          // No fallar la eliminación por esto
+        }
+      }
+
+      // 3. Eliminar documento de cédula si existe
+      if (
+        userData.professionalInfo?.licenseDocument &&
+        userData.professionalInfo.licenseDocument.includes("cloudinary.com")
+      ) {
+        try {
+          const { cloudinaryService } = await import("./cloudinary.service.js");
+          await cloudinaryService.deleteImage(
+            userData.professionalInfo.licenseDocument
+          );
+          console.log("✅ Documento de cédula eliminado de Cloudinary");
+        } catch (error) {
+          console.warn("⚠️ Error eliminando documento:", error);
+        }
+      }
+
+      // 4. Eliminar de Firebase Authentication
+      try {
+        await auth.deleteUser(userId);
+        result.deletedFromAuth = true;
+        console.log("✅ Usuario eliminado de Authentication");
+      } catch (authError) {
+        if (authError.code === "auth/user-not-found") {
+          result.deletedFromAuth = true;
+        } else {
+          console.error("❌ Error eliminando de Auth:", authError.message);
+          result.errors.push({
+            service: "Authentication",
+            error: authError.message,
+            code: authError.code,
+          });
+          // Si falla Auth, lanzar el error para que el frontend lo maneje
+          throw authError;
+        }
+      }
+
+      // 5. Eliminar de Firestore
+      try {
+        await db.collection("users").doc(userId).delete();
+        result.deletedFromFirestore = true;
+        console.log("✅ Usuario eliminado de Firestore");
+      } catch (firestoreError) {
+        console.error(
+          "❌ Error eliminando de Firestore:",
+          firestoreError.message
+        );
+        result.errors.push({
+          service: "Firestore",
+          error: firestoreError.message,
+        });
+      }
+
+      const success = result.deletedFromAuth && result.deletedFromFirestore;
+
+      return { success, ...result };
+    } catch (error) {
+      console.error("Error eliminando cuenta:", error);
       throw error;
     }
   },

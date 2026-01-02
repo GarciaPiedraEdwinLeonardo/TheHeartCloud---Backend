@@ -1,5 +1,6 @@
 import express from "express";
 import { authController } from "../controllers/auth.controller.js";
+import { verifyFirebaseToken } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
@@ -22,5 +23,8 @@ router.get(
   "/verification-status/:userId",
   authController.checkVerificationStatus
 );
+
+// DELETE /api/auth/account - Eliminar cuenta (requiere autenticación)
+router.delete("/account", verifyFirebaseToken, authController.deleteAccount);
 
 export default router;
