@@ -4,6 +4,8 @@ import cloudinaryRoutes from "./cloudinary.routes.js";
 import notificationRoutes from "./notification.routes.js";
 import authRoutes from "./auth.routes.js";
 import verificationRoutes from "./verification.routes.js";
+import commentRoutes from "./comment.routes.js";
+import reportRoutes from "./report.routes.js";
 
 const router = express.Router();
 
@@ -22,5 +24,7 @@ router.use("/cloudinary", cloudinaryRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/auth", authRoutes);
 router.use("/verification", verificationRoutes);
+router.use("/comments", commentRoutes);
+router.use("/reports", reportRoutes);
 
 export default router;
