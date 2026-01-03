@@ -382,6 +382,7 @@ export const forumService = {
       // Enviar notificación
       await notificationService.sendMembershipApproved(
         targetUserId,
+        forumId,
         forumData.name
       );
 
@@ -801,6 +802,7 @@ export const forumService = {
           for (const memberId of userIds) {
             await notificationService.sendMembershipApproved(
               memberId,
+              forumId,
               forumData.name
             );
           }
