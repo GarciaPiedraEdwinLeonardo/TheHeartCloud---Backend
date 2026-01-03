@@ -6,6 +6,7 @@ import authRoutes from "./auth.routes.js";
 import verificationRoutes from "./verification.routes.js";
 import commentRoutes from "./comment.routes.js";
 import reportRoutes from "./report.routes.js";
+import forumRoutes from "./forum.routes.js";
 
 const router = express.Router();
 
@@ -26,5 +27,6 @@ router.use("/auth", authRoutes);
 router.use("/verification", verificationRoutes);
 router.use("/comments", commentRoutes);
 router.use("/reports", reportRoutes);
+router.use("/forums", forumRoutes);
 
 export default router;

@@ -53,7 +53,7 @@ export const notificationService = {
         return { success: true, deletedCount: 0 };
       }
 
-      const batch = db.batch();
+      const batch = admin.firestore().batch();
       notifications.forEach((notif) => {
         const docRef = db.collection("notifications").doc(notif.id);
         batch.delete(docRef);
@@ -76,7 +76,7 @@ export const notificationService = {
         return { success: true, deletedCount: 0 };
       }
 
-      const batch = db.batch();
+      const batch = admin.firestore().batch();
       readNotifications.forEach((notif) => {
         const docRef = db.collection("notifications").doc(notif.id);
         batch.delete(docRef);
@@ -113,7 +113,7 @@ export const notificationService = {
         return { success: true, updatedCount: 0 };
       }
 
-      const batch = db.batch();
+      const batch = admin.firestore().batch();
       unreadNotifications.forEach((notif) => {
         const docRef = db.collection("notifications").doc(notif.id);
         batch.update(docRef, { isRead: true });
@@ -137,7 +137,7 @@ export const notificationService = {
         return { success: true, expiredDeleted: 0, oldDeleted: 0 };
       }
 
-      const batch = db.batch();
+      const batch = admin.firestore().batch();
       let expiredDeleted = 0;
       let oldDeleted = 0;
 
@@ -187,30 +187,66 @@ export const notificationService = {
     }
   },
 
-  // ============= ENVIAR NOTIFICACIONES =============
+  // ============= ENVIAR NOTIFICACIONES - VERIFICACIÓN =============
 
-  async sendPostDeletedByModerator(userId, postTitle) {
+  async sendVerificationApproved(userId, userName, adminEmail) {
     try {
       await this.smartCleanup(userId);
 
       await db.collection("notifications").add({
         userId,
-        type: "post_deleted",
-        title: "Publicación Eliminada",
-        message: `Tu publicación "${postTitle}" fue eliminada por un moderador.`,
+        type: "verification_approved",
+        title: "¡Verificación Aprobada! 🎉",
+        message: `Felicidades ${userName}, tu cuenta médica ha sido verificada y ahora puedes publicar y comentar.`,
         isRead: false,
         isActionable: false,
-        actionData: { postTitle },
+        actionData: {
+          triggeredByUsername: adminEmail,
+        },
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         expiresAt: admin.firestore.Timestamp.fromDate(getExpirationDate()),
       });
 
       return { success: true };
     } catch (error) {
-      console.error("Error enviando notificación:", error);
+      console.error(
+        "Error enviando notificación de verificación aprobada:",
+        error
+      );
       throw error;
     }
   },
+
+  async sendVerificationRejected(userId, reason, adminEmail) {
+    try {
+      await this.smartCleanup(userId);
+
+      await db.collection("notifications").add({
+        userId,
+        type: "verification_rejected",
+        title: "Solicitud Rechazada ❌",
+        message: `Tu solicitud de verificación fue rechazada. Razón: ${reason}`,
+        isRead: false,
+        isActionable: true,
+        actionData: {
+          triggeredByUsername: adminEmail,
+          actionRequired: "resubmit_verification",
+        },
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        expiresAt: admin.firestore.Timestamp.fromDate(getExpirationDate()),
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error(
+        "Error enviando notificación de verificación rechazada:",
+        error
+      );
+      throw error;
+    }
+  },
+
+  // ============= ENVIAR NOTIFICACIONES - POSTS =============
 
   async sendPostApproved(userId, forumId, forumName) {
     try {
@@ -230,7 +266,7 @@ export const notificationService = {
 
       return { success: true };
     } catch (error) {
-      console.error("Error enviando notificación:", error);
+      console.error("Error enviando notificación de post aprobado:", error);
       throw error;
     }
   },
@@ -243,66 +279,228 @@ export const notificationService = {
         userId,
         type: "post_rejected",
         title: "Publicación Rechazada",
-        message: `Tu publicación en "${forumName}" fue rechazada. Motivo: ${reason}`,
+        message: `Tu publicación en "${forumName}" fue rechazada${
+          reason ? `. Motivo: ${reason}` : ""
+        }`,
         isRead: false,
         isActionable: true,
-        actionData: { forumId, forumName, reason },
+        actionData: {
+          forumId,
+          forumName,
+          reason,
+        },
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         expiresAt: admin.firestore.Timestamp.fromDate(getExpirationDate()),
       });
 
       return { success: true };
     } catch (error) {
-      console.error("Error enviando notificación:", error);
+      console.error("Error enviando notificación de post rechazado:", error);
       throw error;
     }
   },
-  async sendVerificationApproved(userId, userName, adminEmail) {
+
+  async sendPostDeletedByModerator(userId, postTitle) {
     try {
       await this.smartCleanup(userId);
 
       await db.collection("notifications").add({
         userId,
-        type: "verification_approved",
-        title: "¡Verificación Aprobada! 🎉",
-        message: `Felicidades ${userName}, tu cuenta médica ha sido verificada y ahora puedes publicar y comentar.`,
+        type: "post_deleted",
+        title: "Publicación Eliminada",
+        message: `Tu publicación "${postTitle}" fue eliminada por un moderador.`,
+        isRead: false,
+        isActionable: false,
+        actionData: { postTitle },
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        expiresAt: admin.firestore.Timestamp.fromDate(getExpirationDate()),
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error enviando notificación de post eliminado:", error);
+      throw error;
+    }
+  },
+
+  // ============= ENVIAR NOTIFICACIONES - COMENTARIOS =============
+
+  async sendCommentDeletedByModerator(userId, commentId, reason) {
+    try {
+      await this.smartCleanup(userId);
+
+      await db.collection("notifications").add({
+        userId,
+        type: "comment_deleted",
+        title: "Comentario Eliminado",
+        message: `Tu comentario fue eliminado por un moderador${
+          reason ? `. Motivo: ${reason}` : ""
+        }`,
+        isRead: false,
+        isActionable: false,
+        actionData: { commentId, reason },
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        expiresAt: admin.firestore.Timestamp.fromDate(getExpirationDate()),
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error(
+        "Error enviando notificación de comentario eliminado:",
+        error
+      );
+      throw error;
+    }
+  },
+
+  // ============= ENVIAR NOTIFICACIONES - COMUNIDADES =============
+
+  async sendMembershipApproved(userId, forumId, forumName) {
+    try {
+      await this.smartCleanup(userId);
+
+      await db.collection("notifications").add({
+        userId,
+        type: "membership_approved",
+        title: "Solicitud Aprobada ✅",
+        message: `Tu solicitud para unirte a "${forumName}" ha sido aprobada. ¡Bienvenido!`,
+        isRead: false,
+        isActionable: false,
+        actionData: { forumId, forumName },
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        expiresAt: admin.firestore.Timestamp.fromDate(getExpirationDate()),
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error(
+        "Error enviando notificación de membresía aprobada:",
+        error
+      );
+      throw error;
+    }
+  },
+
+  async sendModeratorAssigned(userId, forumName) {
+    try {
+      await this.smartCleanup(userId);
+
+      await db.collection("notifications").add({
+        userId,
+        type: "moderator_assigned",
+        title: "Eres Ahora Moderador 🛡️",
+        message: `Has sido asignado como moderador en la comunidad "${forumName}". Ahora puedes gestionar publicaciones y miembros.`,
+        isRead: false,
+        isActionable: false,
+        actionData: { forumName },
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        expiresAt: admin.firestore.Timestamp.fromDate(getExpirationDate()),
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error(
+        "Error enviando notificación de moderador asignado:",
+        error
+      );
+      throw error;
+    }
+  },
+
+  async sendOwnershipTransferred(userId, forumName) {
+    try {
+      await this.smartCleanup(userId);
+
+      await db.collection("notifications").add({
+        userId,
+        type: "ownership_transferred",
+        title: "Eres Ahora Dueño 👑",
+        message: `Has sido asignado como dueño de la comunidad "${forumName}". Ahora tienes control total.`,
+        isRead: false,
+        isActionable: false,
+        actionData: { forumName },
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        expiresAt: admin.firestore.Timestamp.fromDate(getExpirationDate()),
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error(
+        "Error enviando notificación de transferencia de propiedad:",
+        error
+      );
+      throw error;
+    }
+  },
+
+  async sendCommunityBan(userId, forumName, reason, duration) {
+    try {
+      await this.smartCleanup(userId);
+
+      const durationLabels = {
+        "1d": "1 día",
+        "7d": "7 días",
+        "30d": "30 días",
+        permanent: "Permanente",
+      };
+
+      await db.collection("notifications").add({
+        userId,
+        type: "community_ban",
+        title: "Baneado de Comunidad 🚫",
+        message: `Has sido baneado de "${forumName}". Motivo: ${reason}. Duración: ${
+          durationLabels[duration] || duration
+        }`,
+        isRead: false,
+        isActionable: false,
+        actionData: { forumName, reason, duration },
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        expiresAt: admin.firestore.Timestamp.fromDate(getExpirationDate()),
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error enviando notificación de baneo:", error);
+      throw error;
+    }
+  },
+
+  // ============= ENVIAR NOTIFICACIONES - SANCIONES =============
+
+  async sendSanctionNotification(userId, duration, reason, moderatorEmail) {
+    try {
+      await this.smartCleanup(userId);
+
+      const title =
+        duration === "Permanente"
+          ? "Suspensión Permanente 🔴"
+          : `Suspensión Temporal - ${duration} ⚠️`;
+
+      const message =
+        duration === "Permanente"
+          ? `Tu cuenta ha sido suspendida permanentemente. Razón: ${reason}`
+          : `Tu cuenta ha sido suspendida por ${duration}. Razón: ${reason}`;
+
+      await db.collection("notifications").add({
+        userId,
+        type: "user_suspended",
+        title: title,
+        message: message,
         isRead: false,
         isActionable: false,
         actionData: {
-          triggeredByUsername: adminEmail,
+          triggeredByUsername: moderatorEmail,
+          duration,
+          reason,
         },
-        createdAt: new Date(),
-        expiresAt: getExpirationDate(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        expiresAt: admin.firestore.Timestamp.fromDate(getExpirationDate()),
       });
 
       return { success: true };
     } catch (error) {
-      console.error("Error enviando notificación:", error);
+      console.error("Error enviando notificación de sanción:", error);
       throw error;
-    }
-  },
-  async sendVerificationRejected(userId, reason, adminEmail) {
-    try {
-      await this.smartCleanup(userId);
-
-      await db.collection("notifications").add({
-        userId,
-        type: "verification_rejected",
-        title: "Solicitud Rechazada ❌",
-        message: `Tu solicitud de verificación fue rechazada. Razón: ${reason}`,
-        isRead: false,
-        isActionable: true,
-        actionData: {
-          triggeredByUsername: adminEmail,
-          actionRequired: "resubmit_verification",
-        },
-        createdAt: new Date(),
-        expiresAt: getExpirationDate(),
-      });
-
-      return { success: true };
-    } catch (error) {
-      console.error("Error en notificación de rechazo:", error);
     }
   },
 };
