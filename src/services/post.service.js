@@ -133,7 +133,7 @@ export const postService = {
           const deletionPromises = imagesToDelete.map(async (image) => {
             try {
               await cloudinaryService.deleteImage(image.url);
-              console.log("✅ Imagen eliminada de Cloudinary:", image.url);
+              console.log("✅ Imagen eliminada de Cloudinary:");
             } catch (err) {
               console.error("⚠️ Error eliminando imagen (continuando):", err);
               // No fallar la edición si falla la eliminación de imagen
@@ -253,7 +253,7 @@ export const postService = {
         const deletionPromises = postData.images.map(async (image) => {
           try {
             await cloudinaryService.deleteImage(image.url);
-            console.log("✅ Imagen eliminada:", image.url);
+            console.log("✅ Imagen eliminada:");
           } catch (err) {
             console.error("⚠️ Error eliminando imagen:", err);
           }

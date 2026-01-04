@@ -219,9 +219,6 @@ export const reportService = {
     try {
       // Verificar permisos
       await this.verifyModeratorPermissions(userId);
-
-      console.log(reportId);
-
       // Obtener información del reporte
       const reportDoc = await db.collection("reports").doc(reportId).get();
 

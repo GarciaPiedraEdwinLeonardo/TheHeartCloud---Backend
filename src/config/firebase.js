@@ -5,7 +5,7 @@ if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(config.firebase),
   });
-  console.log("✅ Firebase Admin inicializado");
+  console.log("Firebase Admin inicializado");
 }
 
 export const db = admin.firestore();

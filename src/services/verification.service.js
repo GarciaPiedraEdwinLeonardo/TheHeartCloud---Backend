@@ -267,10 +267,6 @@ export const verificationService = {
         let pdfDeleted = false;
         if (userData.professionalInfo?.licenseDocument) {
           try {
-            console.log(
-              "📄 URL completa del documento:",
-              userData.professionalInfo.licenseDocument
-            );
             const { cloudinaryService } = await import(
               "./cloudinary.service.js"
             );

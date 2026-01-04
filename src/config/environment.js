@@ -13,7 +13,7 @@ const requiredEnvVars = [
 // Validar variables de entorno
 requiredEnvVars.forEach((varName) => {
   if (!process.env[varName]) {
-    throw new Error(`❌ Variable de entorno faltante: ${varName}`);
+    throw new Error(`Variable de entorno faltante: ${varName}`);
   }
 });
 

@@ -11,8 +11,6 @@ export const cloudinaryService = {
         throw new Error("URL de Cloudinary inválida");
       }
 
-      console.log("🔍 Extrayendo public_id de:", imageUrl);
-
       // Para archivos raw (PDFs), MANTENER LA EXTENSIÓN
       if (imageUrl.includes("/raw/upload/")) {
         // Ejemplo: https://res.cloudinary.com/xxx/raw/upload/v123/archivo.pdf
@@ -21,7 +19,6 @@ export const cloudinaryService = {
         const match = imageUrl.match(regex);
 
         if (match && match[1]) {
-          console.log("✅ Public ID extraído (raw con extensión):", match[1]);
           return match[1]; // Retorna "archivo.pdf" completo
         }
       }
@@ -31,7 +28,6 @@ export const cloudinaryService = {
       const match = imageUrl.match(regex);
 
       if (match && match[1]) {
-        console.log("✅ Public ID extraído (image):", match[1]);
         return match[1];
       }
 
@@ -49,8 +45,6 @@ export const cloudinaryService = {
     // La firma para destroy NUNCA incluye resource_type, solo estos parámetros en orden alfabético
     const stringToSign = `public_id=${publicId}&timestamp=${timestamp}${apiSecret}`;
 
-    console.log("🔐 String to sign:", stringToSign);
-
     // Usar Web Crypto API (disponible en Node.js)
     const encoder = new TextEncoder();
     const data = encoder.encode(stringToSign);
@@ -61,8 +55,6 @@ export const cloudinaryService = {
     const hashHex = hashArray
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
-
-    console.log("🔑 Signature generada:", hashHex);
 
     return hashHex;
   },
@@ -90,9 +82,6 @@ export const cloudinaryService = {
         config.cloudinary.apiSecret
       );
 
-      console.log(`🗑️ Eliminando ${resourceType} de Cloudinary:`, publicId);
-      console.log("⏰ Timestamp:", timestamp);
-
       // Preparar el body de la petición EN ORDEN ALFABÉTICO
       const formData = new URLSearchParams();
       formData.append("api_key", config.cloudinary.apiKey);
@@ -100,11 +89,8 @@ export const cloudinaryService = {
       formData.append("signature", signature);
       formData.append("timestamp", timestamp.toString());
 
-      console.log("📤 FormData:", Object.fromEntries(formData));
-
       // Hacer la petición a Cloudinary con el endpoint correcto
       const endpoint = `https://api.cloudinary.com/v1_1/${config.cloudinary.cloudName}/${resourceType}/destroy`;
-      console.log("🌐 Endpoint:", endpoint);
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -116,10 +102,7 @@ export const cloudinaryService = {
 
       const data = await response.json();
 
-      console.log("📦 Respuesta de Cloudinary:", data);
-
       if (data.result === "ok" || data.result === "not found") {
-        console.log(`✅ ${resourceType} eliminado correctamente de Cloudinary`);
         return { success: true, result: data.result };
       } else {
         console.error("❌ Error en respuesta de Cloudinary:", data);
