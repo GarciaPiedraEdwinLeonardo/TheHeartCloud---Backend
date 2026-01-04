@@ -22,10 +22,10 @@ export const commentController = {
         });
       }
 
-      if (commentData.content.length > 500) {
+      if (commentData.content.length > 1000) {
         return res.status(400).json({
           success: false,
-          error: "El comentario no puede superar 500 caracteres",
+          error: "El comentario no puede superar 1000 caracteres",
         });
       }
 
@@ -70,10 +70,10 @@ export const commentController = {
         });
       }
 
-      if (content.length > 500) {
+      if (content.length > 1000) {
         return res.status(400).json({
           success: false,
-          error: "El comentario no puede superar 500 caracteres",
+          error: "El comentario no puede superar 1000 caracteres",
         });
       }
 
