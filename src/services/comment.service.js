@@ -28,7 +28,21 @@ export const commentService = {
         throw new Error("Post no encontrado");
       }
 
-      // 3. Crear el comentario
+      // NUEVO: 3. Validar profundidad si es una respuesta
+      if (commentData.parentCommentId) {
+        const depth = await this.calculateCommentDepth(
+          commentData.parentCommentId,
+        );
+        const MAX_DEPTH = 8;
+
+        if (depth >= MAX_DEPTH) {
+          throw new Error(
+            `No se puede responder a este comentario. Límite máximo de ${MAX_DEPTH} niveles alcanzado`,
+          );
+        }
+      }
+
+      // 4. Crear el comentario
       const newComment = {
         content: commentData.content,
         authorId: userId,
@@ -43,7 +57,7 @@ export const commentService = {
 
       const commentRef = await db.collection("comments").add(newComment);
 
-      // 4. Actualizar contadores usando batch
+      // 5. Actualizar contadores usando batch
       const batch = db.batch();
 
       // Incrementar contador en el post
@@ -70,6 +84,42 @@ export const commentService = {
       console.error("Error creando comentario:", error);
       throw error;
     }
+  },
+
+  /**
+   * NUEVO: Calcular la profundidad de un comentario
+   */
+  async calculateCommentDepth(commentId) {
+    let depth = 0;
+    let currentCommentId = commentId;
+
+    // Máximo de iteraciones para evitar loops infinitos
+    const MAX_ITERATIONS = 10;
+    let iterations = 0;
+
+    while (currentCommentId && iterations < MAX_ITERATIONS) {
+      const commentDoc = await db
+        .collection("comments")
+        .doc(currentCommentId)
+        .get();
+
+      if (!commentDoc.exists) {
+        break;
+      }
+
+      const commentData = commentDoc.data();
+      depth++;
+
+      // Si no tiene padre, hemos llegado al comentario raíz
+      if (!commentData.parentCommentId) {
+        break;
+      }
+
+      currentCommentId = commentData.parentCommentId;
+      iterations++;
+    }
+
+    return depth;
   },
 
   /**
@@ -130,7 +180,7 @@ export const commentService = {
 
       const isAuthor = commentData.authorId === userId;
       const isModeratorOrAdmin = ["moderator", "admin"].includes(
-        userData?.role
+        userData?.role,
       );
 
       // Verificar si es moderador del foro
@@ -168,9 +218,8 @@ export const commentService = {
         .collection("posts")
         .doc(commentData.postId)
         .update({
-          "stats.commentCount": admin.firestore.FieldValue.increment(
-            -totalDeleted
-          ),
+          "stats.commentCount":
+            admin.firestore.FieldValue.increment(-totalDeleted),
         });
 
       return {
@@ -209,7 +258,7 @@ export const commentService = {
       for (const replyDoc of repliesSnapshot.docs) {
         totalDeleted += await this.deleteCommentRecursive(
           replyDoc.id,
-          requestingUserId
+          requestingUserId,
         );
       }
 
